@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>FLAVA クチコミ</title>
+<style>
+  :root {
+    --bg: #faf8f5; --card: #ffffff; --ink: #222; --sub: #666; --line: #e3ded6;
+    --accent: #2f4a3a; --accent-ink: #fff; --chip: #f1ede6; --chip-on: #2f4a3a;
+    --warn-bg: #fff4e0; --warn-ink: #7a4b00;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif; line-height: 1.7; }
+  main { max-width: 520px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 1.25rem; margin: 0 0 4px; letter-spacing: .04em; }
+  .lead { color: var(--sub); font-size: .9rem; margin: 0 0 20px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  h2 { font-size: 1rem; margin: 0 0 10px; }
+  h2 small { color: var(--sub); font-weight: normal; font-size: .8rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 999px;
+    padding: 8px 14px; font-size: .92rem; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--chip-on); color: #fff; border-color: var(--chip-on); }
+  textarea, input[type=text] { width: 100%; font: inherit; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fff; }
+  textarea { min-height: 150px; resize: vertical; }
+  .row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  button.main { flex: 1; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; padding: 14px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+  button.sub { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: .9rem; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: default; }
+  .note { font-size: .8rem; color: var(--sub); margin: 8px 0 0; }
+  .warn { display: none; background: var(--warn-bg); color: var(--warn-ink); border-radius: 10px; padding: 10px; font-size: .85rem; margin-top: 10px; }
+  .warn.show { display: block; }
+  ol.steps { margin: 0; padding-left: 1.3em; font-size: .9rem; }
+  .done { display: none; text-align: center; font-size: .9rem; color: var(--accent); margin-top: 10px; }
+  .done.show { display: block; }
+  footer { font-size: .75rem; color: var(--sub); text-align: center; margin-top: 18px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>帽子屋FLAVA クチコミ</h1>
+  <p class="lead">イオンモール川口前川 2F。<br>当てはまるものを選ぶと、文章のたたき台ができます。ご自身の言葉に直してから投稿してください。</p>
+
+  <section>
+    <h2>1. 今日見た・買ったもの <small>（いくつでも）</small></h2>
+    <div class="chips" id="items"></div>
+  </section>
+
+  <section>
+    <h2>2. 印象に残ったこと <small>（いくつでも）</small></h2>
+    <div class="chips" id="points"></div>
+  </section>
+
+  <section>
+    <h2>3. ひとこと <small>（なくても大丈夫）</small></h2>
+    <input type="text" id="free" maxlength="120" placeholder="例：週末のお出かけ用に選びました">
+  </section>
+
+  <section>
+    <h2>4. たたき台 <small>（自由に直せます）</small></h2>
+    <textarea id="draft" placeholder="1と2を選ぶと、ここに文章が出ます。何も選ばずに、ご自身で書いても大丈夫です。"></textarea>
+    <div class="warn" id="warn"></div>
+    <div class="row">
+      <button class="sub" id="regen" type="button">別の言い方にする</button>
+      <button class="sub" id="clear" type="button">消す</button>
+    </div>
+    <p class="note">この文章はお店に送られません。この画面の中だけで作っています。</p>
+  </section>
+
+  <section>
+    <h2>5. Googleマップに投稿</h2>
+    <ol class="steps">
+      <li>下のボタンで文章をコピーし、Googleマップを開きます</li>
+      <li>ご自身のGoogleアカウントで、星の数を選びます</li>
+      <li>文章欄を長押しして「ペースト」し、内容を確かめて「投稿」</li>
+    </ol>
+    <div class="row">
+      <button class="main" id="go" type="button">コピーしてGoogleマップを開く</button>
+    </div>
+    <div class="done" id="done">コピーしました。Googleマップで貼り付けてください。</div>
+    <p class="note">星の数も、文章も、投稿するかどうかも、すべてお客様のご判断です。投稿の有無で特典や対応が変わることはありません。</p>
+  </section>
+
+  <footer>帽子屋FLAVA イオンモール川口前川 2F ／ 21:00閉店</footer>
+</main>
+
+<script>
+/* ===== 設定（店側で書き換える） ===================================== */
+const CONFIG = {
+  storeName: "帽子屋FLAVA",
+  storePlace: "イオンモール川口前川",
+  // [要入力] Google の Place ID（ChIJ で始まる文字列）。入れると口コミ画面が直接開く。
+  placeId: "ChIJaxcJFRCVGGAREE2DK3BU1fw", // 2026-11-26 Googleマップの店ページから取得。CID 0xfcd554702b834d10 と一致を確認
+  // [要入力] Place ID が無いときの予備。Googleビジネスプロフィールの「クチコミを依頼」で出る短縮URL（g.page/r/... など）。
+  // 2026-11-26 本人提供のURL（!12e1 で口コミを書く画面が開く。追跡用の後ろの部分は削除）。CID は 0xfcd554702b834d10。
+  reviewUrl: "https://www.google.com/maps/place//@35.8329443,139.7069785,17z/data=!3m1!4b1!4m3!3m2!1s0x601895101509176b:0xfcd554702b834d10!12e1",
+  // 両方空のときは店名検索で開く（お客様がクチコミタブを押す一手間が残る）。
+  searchQuery: "帽子屋FLAVA イオンモール川口前川",
+  // 対外的に出さない語。たたき台には絶対に入れない。お客様が入力した場合は注意を出す。
+  // [要確認] 仕入れ先の社名・屋号を本人に確認して追記する。ランチグは「仕入れ先変更」の文脈で出てくるが、仕入れ先名かは未確認（推測）。
+  forbidden: ["仕入", "仕入れ", "仕入先", "仕入れ先", "問屋", "卸値", "卸売", "原価", "掛け率", "掛率", "下代", "ランチグ"]
+};
+
+/* ===== 選択肢 =========================================================== */
+const ITEMS = [
+  { id: "hat",   label: "ハット",       word: "ハット" },
+  { id: "cap",   label: "キャップ",     word: "キャップ" },
+  { id: "knit",  label: "ニット帽",     word: "ニット帽" },
+  { id: "hunt",  label: "ハンチング",   word: "ハンチング" },
+  { id: "cas",   label: "キャスケット", word: "キャスケット" },
+  { id: "wide",  label: "つば広",       word: "つば広の帽子" },
+  { id: "sun",   label: "サングラス",   word: "サングラス" },
+  { id: "gift",  label: "プレゼント用", word: "プレゼント", gift: true }
+];
+
+const POINTS = [
+  { id: "size",    label: "大きいサイズがあった", s: ["ほかではなかなか見ない大きいサイズが置いてあって助かりました。", "大きいサイズの帽子があって、無理なくかぶれるものが見つかりました。"] },
+  { id: "small",   label: "小さいサイズがあった", s: ["小さめのサイズがあって、ぶかぶかにならない帽子を選べました。", "小さいサイズも置いてあり、自分に合う大きさのものが見つかりました。"] },
+  { id: "advice",  label: "似合うものを一緒に選んでくれた", s: ["スタッフさんが似合う形を一緒に探してくれました。", "自分では選ばない形も提案してもらえて、選ぶのが楽しかったです。"] },
+  { id: "explain", label: "説明がわかりやすかった", s: ["素材やかぶり方の説明がわかりやすかったです。", "質問にも丁寧に答えてもらえて、納得して選べました。"] },
+  { id: "try",     label: "気軽に試着できた", s: ["気軽に試着させてもらえる雰囲気でした。", "何個も試着しましたが、嫌な顔をされず安心でした。"] },
+  { id: "range",   label: "品ぞろえが良かった", s: ["種類が多くて、見ているだけでも楽しいお店です。", "形も色もいろいろあって、選びがいがありました。"] },
+  { id: "price",   label: "値段がわかりやすかった", s: ["値段がわかりやすく、安心して選べました。", "価格がはっきりしていて選びやすかったです。"] },
+  { id: "found",   label: "欲しかったものが見つかった", s: ["探していた雰囲気の帽子が見つかりました。", "イメージどおりのものが見つかって満足です。"] }
+];
+
+const OPENERS = [
+  "{place}の2階にある帽子屋さんです。",
+  "{place}に来たついでに寄りました。",
+  "帽子を探して{place}のこのお店に来ました。"
+];
+const ITEM_LINES = [
+  "今回は{items}を見に来ました。",
+  "{items}を探していました。",
+  "{items}を選びました。"
+];
+const GIFT_LINES = [
+  "プレゼント用に選びました。",
+  "贈り物として探していました。"
+];
+const CLOSERS = [
+  "また寄りたいと思います。",
+  "次も帽子を探すときはここに来ます。",
+  "また見に来ます。",
+  ""
+];
+
+/* ===== 状態 ============================================================= */
+const state = { items: new Set(), points: new Set(), seed: 0, userEdited: false };
+
+function pick(arr, k) { return arr[(state.seed + k) % arr.length]; }
+
+function joinJa(words) {
+  if (words.length <= 1) return words.join("");
+  return words.slice(0, -1).join("、") + "や" + words[words.length - 1];
+}
+
+function containsForbidden(text) {
+  const t = (text || "").replace(/\s/g, "");
+  return CONFIG.forbidden.filter(w => w && t.includes(w));
+}
+
+function buildDraft() {
+  const parts = [];
+  const free = document.getElementById("free").value.trim();
+  const items = ITEMS.filter(i => state.items.has(i.id));
+  const nonGift = items.filter(i => !i.gift).map(i => i.word);
+  const isGift = items.some(i => i.gift);
+  const pts = POINTS.filter(p => state.points.has(p.id));
+
+  if (!items.length && !pts.length && !free) return "";
+
+  parts.push(pick(OPENERS, 0).replace("{place}", CONFIG.storePlace));
+  if (nonGift.length) parts.push(pick(ITEM_LINES, 1).replace("{items}", joinJa(nonGift)));
+  if (isGift) parts.push(pick(GIFT_LINES, 2));
+  pts.forEach((p, i) => parts.push(pick(p.s, i + 3)));
+  if (free) parts.push(/[。！!？?]$/.test(free) ? free : free + "。");
+  const closer = pick(CLOSERS, 4);
+  if (closer) parts.push(closer);
+
+  // たたき台に禁止語を入れない（店側の文だけを対象。お客様の「ひとこと」は残し、注意だけ出す）
+  const own = parts.filter(s => s !== free && s !== free + "。");
+  if (own.some(s => containsForbidden(s).length)) {
+    console.warn("template contains forbidden word"); // 設定ミスの検出用
+    return parts.filter(s => !containsForbidden(s).length || s === free || s === free + "。").join("\n");
+  }
+  return parts.join("\n");
+}
+
+function refreshDraft(force) {
+  const ta = document.getElementById("draft");
+  if (state.userEdited && !force) return;
+  ta.value = buildDraft();
+  state.userEdited = false;
+  checkWarn();
+}
+
+function checkWarn() {
+  const text = document.getElementById("draft").value + document.getElementById("free").value;
+  const hits = containsForbidden(text);
+  const w = document.getElementById("warn");
+  if (hits.length) {
+    const top = hits.sort((a,b)=>b.length-a.length)[0];
+    w.textContent = "お店からのお願い：「" + top + "」など、取引先やお店の内部に関わる言葉は載せないでいただけると助かります。（このままでも投稿はできます）";
+    w.classList.add("show");
+  } else {
+    w.classList.remove("show");
+  }
+}
+
+function reviewTarget() {
+  if (CONFIG.placeId) return "https://search.google.com/local/writereview?placeid=" + encodeURIComponent(CONFIG.placeId);
+  if (CONFIG.reviewUrl) return CONFIG.reviewUrl;
+  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(CONFIG.searchQuery);
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch (e) {
+    const ta = document.getElementById("draft");
+    ta.focus(); ta.select();
+    try { return document.execCommand("copy"); } catch (e2) { return false; }
+  }
+}
+
+/* ===== 画面 ============================================================= */
+function renderChips(rootId, list, set) {
+  const root = document.getElementById(rootId);
+  list.forEach(o => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = o.label;
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", () => {
+      if (set.has(o.id)) set.delete(o.id); else set.add(o.id);
+      b.setAttribute("aria-pressed", set.has(o.id) ? "true" : "false");
+      refreshDraft(false);
+    });
+    root.appendChild(b);
+  });
+}
+
+renderChips("items", ITEMS, state.items);
+renderChips("points", POINTS, state.points);
+
+document.getElementById("free").addEventListener("input", () => refreshDraft(false));
+document.getElementById("draft").addEventListener("input", () => { state.userEdited = true; checkWarn(); });
+document.getElementById("regen").addEventListener("click", () => { state.seed++; refreshDraft(true); });
+document.getElementById("clear").addEventListener("click", () => {
+  document.getElementById("draft").value = ""; state.userEdited = true; checkWarn();
+});
+document.getElementById("go").addEventListener("click", async () => {
+  const text = document.getElementById("draft").value.trim();
+  if (text) {
+    const ok = await copyText(text);
+    document.getElementById("done").textContent = ok
+      ? "コピーしました。Googleマップで貼り付けてください。"
+      : "コピーできませんでした。文章を長押しでコピーしてから、Googleマップで貼り付けてください。";
+    document.getElementById("done").classList.add("show");
+  }
+  window.open(reviewTarget(), "_blank", "noopener");
+});
+
+state.seed = Math.floor(Math.random() * 12);
+</script>
+</body>
+</html>
